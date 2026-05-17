@@ -1,0 +1,17 @@
+**__pycache__/**
+*.pyc
+*.pyo
+*.pyd
+
+pycache/
+__pycache__/
+*.pyc
+
+api/.env
+api/docker-compose.yml
+
+api/uploads/
+
+api/alembic/versions/*.py
+
+api/logs/
