@@ -1,16 +1,17 @@
 from datetime import datetime, date, timezone
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
 
 from src.app.model.invoice import Invoice, InvoiceStatus
-from src.app.model.payment import PaymentStatus
+from src.app.model.payment import Payment, PaymentStatus
 from src.app.model.room import Room
 from src.app.model.tenant import Tenant
 from src.app.schema.query import QueryParameters
-from src.app.schema.room import PaymentInfo, RoomCreate, RoomDetailResponse, RoomUpdate, TenantInfo
+from src.app.schema.room import RoomCreate, RoomDetailResponse, RoomUpdate
 from src.app.services.invoice import InvoiceService
+
 
 class RoomService:
     
@@ -18,62 +19,80 @@ class RoomService:
     def _build_room_response(room: Room, current_month: date) -> RoomDetailResponse:
         """Helper method to build room response with calculated fields"""
         if room.is_available:
-            status = "available"
-            tenant_info = None
-            payment_status = None
-            amount_due = 0
-            due_date = None
-            current_invoice = None
-            latest_payment = None
+            return RoomDetailResponse(
+                id=room.id,
+                name=room.name,
+                description=room.description,
+                price=float(room.price),
+                is_available=room.is_available,
+                status="available",
+                tenant=None,
+                payment_status=None,
+                amount_due=0.0,
+                due_date=None,
+                latest_payment=None,
+                updated_at=room.updated_at
+            )
+        
+        tenant_info = {
+            "id": room.tenant.id,
+            "name": room.tenant.name,
+            "email": room.tenant.email,
+            "phone": room.tenant.phone,
+            "id_card": room.tenant.id_card,
+            "check_in_date": room.tenant.check_in_date,
+            "is_active": room.tenant.is_active
+        } if room.tenant else None
+        
+        current_invoice = None
+        if room.tenant and room.tenant.is_active and room.invoices:
+            current_invoice = next(
+                (inv for inv in room.invoices if inv.year == current_month.year and inv.month == current_month.month),
+                None
+            )
+        
+        if current_invoice is None:
+            payment_status = "no_invoice"
+            amount_due = float(room.price)
+            due_date = current_month.replace(day=5)
+        elif current_invoice.status == InvoiceStatus.paid:
+            payment_status = "paid"
+            amount_due = 0.0
+            due_date = current_invoice.due_date
+        elif current_invoice.status == InvoiceStatus.late:
+            payment_status = "late"
+            amount_due = float(current_invoice.amount) - float(current_invoice.amount_paid)
+            due_date = current_invoice.due_date
         else:
-            status = "occupied"
-            tenant_info = TenantInfo.model_validate(room.tenant) if room.tenant else None
-            
-            current_invoice = None
-            if room.tenant and room.tenant.is_active:
-                current_invoice = next(
-                    (inv for inv in room.invoices if inv.year == current_month.year and inv.month == current_month.month),
-                    None
-                )
-            
-            if current_invoice is None:
-                payment_status = "no_invoice"
-                amount_due = room.price
-                due_date = current_month.replace(day=5)
-            elif current_invoice.status == InvoiceStatus.paid:
-                payment_status = "paid"
-                amount_due = 0
-                due_date = current_invoice.due_date
-            elif current_invoice.status == InvoiceStatus.late:
-                payment_status = "late"
-                amount_due = current_invoice.amount - current_invoice.amount_paid
-                due_date = current_invoice.due_date
-            else:
-                payment_status = "pending"
-                amount_due = current_invoice.amount - current_invoice.amount_paid
-                due_date = current_invoice.due_date
-            
-            latest_payment = None
-            if current_invoice and current_invoice.payments:
-                completed_payments = [p for p in current_invoice.payments if p.status == PaymentStatus.completed]
-                if completed_payments:
-                    latest_payment_orm = max(completed_payments, key=lambda p: p.paid_at)
-                    latest_payment = PaymentInfo.model_validate(latest_payment_orm)
+            payment_status = "pending"
+            amount_due = float(current_invoice.amount) - float(current_invoice.amount_paid)
+            due_date = current_invoice.due_date
+        
+        latest_payment = None
+        if current_invoice and current_invoice.payments:
+            completed_payments = [p for p in current_invoice.payments if p.status == PaymentStatus.completed]
+            if completed_payments:
+                latest = max(completed_payments, key=lambda p: p.paid_at)
+                latest_payment = {
+                    "id": latest.id,
+                    "amount": float(latest.amount),
+                    "paid_at": latest.paid_at,
+                    "image": latest.image
+                }
         
         return RoomDetailResponse(
             id=room.id,
             name=room.name,
             description=room.description,
-            price=room.price,
+            price=float(room.price),
             is_available=room.is_available,
-            status=status,
+            status="occupied",
             tenant=tenant_info,
             payment_status=payment_status,
             amount_due=amount_due,
-            due_date=due_date.isoformat() if due_date else None,
+            due_date=due_date,
             latest_payment=latest_payment,
-            current_invoice_id=current_invoice.id if current_invoice else None,
-            updated_at=room.updated_at.isoformat() if room.updated_at else None
+            updated_at=room.updated_at
         )
     
     @staticmethod
@@ -83,17 +102,15 @@ class RoomService:
         if existing_room:
             raise ValueError("Room with this name already exists")
         
-        if data.price <= 0:
-            raise ValueError("Room price must be greater than 0")
-        
         room = Room(
             name=data.name,
             description=data.description,
             price=data.price,
-            is_available=data.is_available if hasattr(data, 'is_available') else True
+            is_available=data.is_available if data.is_available is not None else True
         )
         
         db.add(room)
+        db.flush()
         return room
     
     @staticmethod
@@ -157,7 +174,7 @@ class RoomService:
         return RoomService._build_room_response(room, current_month)
     
     @staticmethod
-    def update_room(db: Session, room_id: int, data: RoomUpdate) -> RoomDetailResponse:
+    def update_room(db: Session, room_id: int, data: RoomUpdate) -> Room:
         """Update room details"""
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
@@ -168,10 +185,12 @@ class RoomService:
             setattr(room, key, value)
         
         room.updated_at = datetime.now(timezone.utc)
+        db.flush()
         return room
     
     @staticmethod
-    def delete_room(db: Session, room_id: int):
+    def delete_room(db: Session, room_id: int) -> Dict[str, str]:
+        """Delete a room"""
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")
@@ -180,6 +199,7 @@ class RoomService:
             raise ValueError("Cannot delete room with active tenant. Remove tenant first.")
         
         db.delete(room)
+        db.flush()
         return {"message": "Room deleted successfully"}
     
     @staticmethod
@@ -189,21 +209,17 @@ class RoomService:
         if not room:
             raise ValueError("Room not found")
         
-        # Check if any tenant (active or inactive) is currently linked to this room
         conflicting_tenant = db.query(Tenant).filter(
             Tenant.room_id == room_id
         ).first()
         
         if conflicting_tenant:
             if conflicting_tenant.is_active:
-                raise ValueError(f"Room is already occupied by active tenant: {conflicting_tenant.name} (ID: {conflicting_tenant.id})")
-            else:
-                # Clear the inactive tenant's room_id to resolve conflict
-                conflicting_tenant.room_id = None
-                db.flush()
+                raise ValueError(f"Room is already occupied by active tenant: {conflicting_tenant.name}")
+            conflicting_tenant.room_id = None
+            db.flush()
         
         if not room.is_available:
-            # Double check - if room says not available but no active tenant, fix it
             active_tenant = db.query(Tenant).filter(
                 Tenant.room_id == room_id,
                 Tenant.is_active == True
@@ -217,11 +233,9 @@ class RoomService:
         if not tenant:
             raise ValueError("Tenant not found")
 
-        # Check if tenant is already in another room
         if tenant.room_id is not None and tenant.is_active:
             raise ValueError(f"Tenant is already assigned to room {tenant.room_id}. Remove them first.")
         
-        # Clear any old room assignment
         if tenant.room_id is not None:
             tenant.room_id = None
 
@@ -233,10 +247,8 @@ class RoomService:
         room.is_available = False
         room.updated_at = datetime.now(timezone.utc)
         
-        # Flush changes to database before generating invoice
         db.flush()
         
-        from datetime import date
         current_month = date.today().replace(day=1)
         check_in_date_value = tenant.check_in_date.date()
         
@@ -252,7 +264,7 @@ class RoomService:
         return tenant
     
     @staticmethod
-    def get_room_payment_history(db: Session, room_id: int, months: int) -> Dict[str, Any]:
+    def get_room_payment_history(db: Session, room_id: int, months: int = 12) -> Dict[str, Any]:
         """Get payment history for a room (last N months)"""
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:

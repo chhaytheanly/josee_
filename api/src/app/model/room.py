@@ -1,6 +1,6 @@
 import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, Integer, Float, String, Identity
+from sqlalchemy import Boolean, Column, DateTime, Integer, Numeric, String, Identity
 from sqlalchemy.orm import relationship
 
 from src.app.config.base import Base
@@ -8,12 +8,14 @@ from src.app.config.base import Base
 
 class Room(Base):
     __tablename__ = "rooms"
-    
+
     id = Column(Integer, Identity(start=1), primary_key=True)
     name = Column(String(255), nullable=False)
     description = Column(String(255), nullable=True)
-    price = Column(Float, nullable=False)
+    price = Column(Numeric(10, 2), nullable=False)
     is_available = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
-    tenant = relationship("Tenant", back_populates="room", uselist=False, cascade="all, delete")
-    invoices = relationship("Invoice", back_populates="room", cascade="all, delete")
+
+    tenant = relationship("Tenant", back_populates="room", uselist=False)
+    invoices = relationship("Invoice", back_populates="room")

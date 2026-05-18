@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Dict, Any, Optional
 
 from sqlalchemy import or_
 from sqlalchemy.orm import Session, selectinload
@@ -9,34 +10,43 @@ from src.app.model.tenant import Tenant
 from src.app.schema.query import QueryParameters
 from src.app.schema.tenant import TenantCreate
 
+
 class TenantService:
+    
     @staticmethod
     def create_tenant(db: Session, data: TenantCreate) -> Tenant:
+        """Create a new tenant"""
+        if data.email:
+            existing_tenant = db.query(Tenant).filter(Tenant.email == data.email).first()
+            if existing_tenant:
+                raise ValueError("Tenant with this email already exists")
         
-        existing_tenant = db.query(Tenant).filter(Tenant.email == data.email).first()
-        if existing_tenant:
-            raise ValueError("Tenant with this email already exists")
-        
-        tenant = Tenant(name=data.name,
-                        email=data.email,
-                        phone=data.phone,
-                        id_card=data.id_card)
+        tenant = Tenant(
+            name=data.name,
+            email=data.email,
+            phone=data.phone,
+            id_card=data.id_card
+        )
         
         db.add(tenant)
+        db.flush()
         return tenant
     
     @staticmethod
     def get_tenant_by_id(db: Session, tenant_id: int) -> Tenant:
+        """Get tenant by ID with related data"""
         tenant = db.query(Tenant).options(
-            selectinload(Tenant.room)
-            ,selectinload(Tenant.invoices).selectinload(Invoice.payments)
-            ).filter(Tenant.id == tenant_id).first()
+            selectinload(Tenant.room),
+            selectinload(Tenant.invoices).selectinload(Invoice.payments)
+        ).filter(Tenant.id == tenant_id).first()
+        
         if not tenant:
             raise ValueError("Tenant not found")
         return tenant
     
     @staticmethod
-    def get_all_tenants(db: Session, query_params: QueryParameters):
+    def get_all_tenants(db: Session, query_params: QueryParameters) -> Dict[str, Any]:
+        """Get all tenants with pagination and search"""
         query = db.query(Tenant).options(
             selectinload(Tenant.room),
             selectinload(Tenant.invoices).selectinload(Invoice.payments)
@@ -59,12 +69,32 @@ class TenantService:
             "data": tenants,
             "total": total,
             "page": query_params.page,
-            "limit": query_params.limit,
+            "limit": query_params.limit
         }
     
     @staticmethod
+    def update_tenant(db: Session, tenant_id: int, data: TenantCreate) -> Tenant:
+        """Update tenant details"""
+        tenant = db.query(Tenant).filter(Tenant.id == tenant_id).first()
+        if not tenant:
+            raise ValueError("Tenant not found")
+        
+        if data.email and data.email != tenant.email:
+            existing = db.query(Tenant).filter(Tenant.email == data.email).first()
+            if existing:
+                raise ValueError("Tenant with this email already exists")
+        
+        update_data = data.model_dump(exclude_unset=True)
+        for key, value in update_data.items():
+            setattr(tenant, key, value)
+        
+        tenant.updated_at = datetime.now(timezone.utc)
+        db.flush()
+        return tenant
+    
+    @staticmethod
     def assign_tenant(db: Session, room_id: int, tenant_data: dict) -> Tenant:
-        """Assign tenant to room"""
+        """Create and assign tenant to room"""
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")
@@ -74,6 +104,11 @@ class TenantService:
         
         if not tenant_data.get("name"):
             raise ValueError("Tenant name is required")
+        
+        if tenant_data.get("email"):
+            existing = db.query(Tenant).filter(Tenant.email == tenant_data["email"]).first()
+            if existing:
+                raise ValueError("Tenant with this email already exists")
         
         tenant = Tenant(
             room_id=room_id,
@@ -89,6 +124,7 @@ class TenantService:
         room.updated_at = datetime.now(timezone.utc)
         
         db.add(tenant)
+        db.flush()
         return tenant
     
     @staticmethod
@@ -98,20 +134,18 @@ class TenantService:
         if not tenant:
             raise ValueError("Tenant not found")
         
-        # Get room_id before clearing it
         room_id = tenant.room_id
         
-        # Clear tenant's room assignment
-        tenant.room_id = None  # Important: Clear the room_id to allow new tenant assignment
+        tenant.room_id = None
         tenant.is_active = False
         tenant.check_out_date = datetime.now(timezone.utc)
         tenant.updated_at = datetime.now(timezone.utc)
         
-        # Make room available
         if room_id:
             room = db.query(Room).filter(Room.id == room_id).first()
             if room:
                 room.is_available = True
                 room.updated_at = datetime.now(timezone.utc)
 
+        db.flush()
         return tenant

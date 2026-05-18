@@ -22,7 +22,7 @@ class PermissionGuard:
             user_id = payload.get("sub")
             if user_id is None:
                 raise HTTPException(status_code=401, detail="Invalid token")
-            user = UserService.getUserById(db, user_id)
+            user = UserService.get_user_by_id(db, user_id)
             return user
         except ValueError:
             raise HTTPException(status_code=401, detail="Invalid token")
