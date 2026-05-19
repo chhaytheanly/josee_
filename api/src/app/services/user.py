@@ -15,7 +15,7 @@ class UserService:
     
     @staticmethod
     def login(db: Session, data: LoginRequest) -> UserResponse:
-        """Authenticate user and return user data"""
+
         user = db.query(User).options(
             selectinload(User.role)
         ).filter(User.email == data.email).first()
@@ -30,7 +30,6 @@ class UserService:
     
     @staticmethod
     def get_setup_form(db: Session) -> dict:
-        """Get form configuration for user management"""
         roles = db.query(Role).all()
         role_options = [{"value": role.id, "label": role.name} for role in roles]
         
@@ -46,7 +45,6 @@ class UserService:
     
     @staticmethod
     def create_user(db: Session, data: UserCreate, image: Optional[UploadFile] = None) -> UserResponse:
-        """Create a new user"""
         existing_user = db.query(User).filter(User.email == data.email).first()
         if existing_user:
             raise ValueError("Email already exists")
@@ -91,7 +89,6 @@ class UserService:
     
     @staticmethod
     def get_all_users(db: Session, page: int = 1, limit: int = 100) -> dict:
-        """Get all users with pagination"""
         total = db.query(func.count(User.id)).scalar()
         
         users = db.query(User).options(
@@ -111,7 +108,6 @@ class UserService:
     
     @staticmethod
     def update_user(db: Session, user_id: int, data: UserUpdate, image: Optional[UploadFile] = None) -> UserResponse:
-        """Update user details"""
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise ValueError("User not found")
@@ -145,7 +141,6 @@ class UserService:
     
     @staticmethod
     def delete_user(db: Session, user_id: int) -> dict:
-        """Delete a user"""
         user = db.query(User).filter(User.id == user_id).first()
         if not user:
             raise ValueError("User not found")

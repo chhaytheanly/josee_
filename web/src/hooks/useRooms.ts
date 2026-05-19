@@ -54,7 +54,7 @@ export const useDeleteRoom = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: number) => {
-      await api.delete(`/room/${id}`);
+      await api.delete(`/rooms/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['rooms'] });
@@ -66,7 +66,7 @@ export const useAssignTenantToRoom = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ roomId, tenantData }: { roomId: number; tenantData: any }) => {
-      const { data } = await api.post(`/room/${roomId}/assign`, tenantData);
+      const { data } = await api.post(`/rooms/${roomId}/assign`, tenantData);
       return data;
     },
     onSuccess: () => {

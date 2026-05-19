@@ -17,7 +17,6 @@ class RoomService:
     
     @staticmethod
     def _build_room_response(room: Room, current_month: date) -> RoomDetailResponse:
-        """Helper method to build room response with calculated fields"""
         if room.is_available:
             return RoomDetailResponse(
                 id=room.id,
@@ -97,7 +96,6 @@ class RoomService:
     
     @staticmethod
     def create_room(db: Session, data: RoomCreate) -> Room:
-        """Create a new room"""
         existing_room = db.query(Room).filter(Room.name == data.name).first()
         if existing_room:
             raise ValueError("Room with this name already exists")
@@ -115,7 +113,6 @@ class RoomService:
     
     @staticmethod
     def get_all_rooms(db: Session, query_params: QueryParameters) -> Dict[str, Any]:
-        """Get all rooms with real-time tenant & payment status"""
         query = db.query(Room)
         
         if query_params.search:
@@ -161,7 +158,6 @@ class RoomService:
     
     @staticmethod
     def get_room_by_id(db: Session, room_id: int) -> RoomDetailResponse:
-        """Get single room with full details"""
         room = db.query(Room).options(
             selectinload(Room.tenant),
             selectinload(Room.invoices).selectinload(Invoice.payments)
@@ -175,7 +171,7 @@ class RoomService:
     
     @staticmethod
     def update_room(db: Session, room_id: int, data: RoomUpdate) -> Room:
-        """Update room details"""
+
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")
@@ -190,7 +186,7 @@ class RoomService:
     
     @staticmethod
     def delete_room(db: Session, room_id: int) -> Dict[str, str]:
-        """Delete a room"""
+
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")
@@ -204,7 +200,7 @@ class RoomService:
     
     @staticmethod
     def assign_tenant(db: Session, room_id: int, tenant_id: int) -> Tenant:
-        """Assign an existing tenant to a room"""
+
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")
@@ -265,7 +261,7 @@ class RoomService:
     
     @staticmethod
     def get_room_payment_history(db: Session, room_id: int, months: int = 12) -> Dict[str, Any]:
-        """Get payment history for a room (last N months)"""
+
         room = db.query(Room).filter(Room.id == room_id).first()
         if not room:
             raise ValueError("Room not found")

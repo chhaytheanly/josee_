@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from src.app.config.session import get_db
 from src.app.middleware.guard.permission import PermissionGuard
 from src.app.schema.query import QueryParameters
-from src.app.schema.room import RoomCreate, RoomUpdate
+from src.app.schema.room import RoomCreate, RoomUpdate, TenantAssignRequest
 from src.app.services.room import RoomService
 
 room_router = APIRouter(
@@ -30,10 +30,10 @@ def create_room(data: RoomCreate, db: Session = Depends(get_db)):
 
 
 @room_router.post("/{room_id}/assign")
-def assign_tenant(room_id: int, data: dict, db: Session = Depends(get_db)):
+def assign_tenant(room_id: int, data: TenantAssignRequest, db: Session = Depends(get_db)):
     """Assign a tenant to a room"""
     try:        
-        tenant = RoomService.assign_tenant(db, room_id, data["tenant_id"])
+        tenant = RoomService.assign_tenant(db, room_id, data.tenant_id)
         db.commit()
         db.refresh(tenant)
         return tenant

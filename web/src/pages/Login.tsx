@@ -75,18 +75,19 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 px-4 py-10">
       {/* Background Glow */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
+        <div className="absolute left-[-10%] top-[-10%] h-96 w-96 rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute bottom-[-10%] right-[-10%] h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-violet-500/10 blur-3xl" />
       </div>
 
-      <Card className="w-full max-w-md border-border/50 bg-background/95 shadow-2xl backdrop-blur">
+      <Card className="w-full max-w-md border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 shadow-2xl backdrop-blur-xl">
         <CardHeader className="space-y-4 text-center">
           {/* Logo */}
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-            <ShieldCheck className="h-8 w-8 text-primary" />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 ring-1 ring-blue-500/20 shadow-lg shadow-blue-500/25">
+            <ShieldCheck className="h-8 w-8 text-white" />
           </div>
 
           <div className="space-y-1">

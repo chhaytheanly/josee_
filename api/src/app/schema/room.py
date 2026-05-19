@@ -20,6 +20,10 @@ class RoomUpdate(BaseModel):
     is_available: Optional[bool] = None
 
 
+class TenantAssignRequest(BaseModel):
+    tenant_id: int
+
+
 class RoomDetailResponse(BaseModel):
     id: int
     name: str

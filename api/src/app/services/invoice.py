@@ -18,7 +18,6 @@ class InvoiceService:
     
     @staticmethod
     def _calculate_prorated_amount(room_price: float, check_in_date: date, invoice_date: date) -> float:
-        """Calculate prorated rent for partial month"""
         days_in_month = calendar.monthrange(invoice_date.year, invoice_date.month)[1]
         remaining_days = days_in_month - check_in_date.day + 1
         
@@ -79,7 +78,7 @@ class InvoiceService:
             for_date = date.today()
         
         active_tenants = db.query(Tenant).filter(
-            Tenant.is_active.is_(True),
+            Tenant.is_active == True,
             Tenant.room_id.isnot(None)
         ).all()
         
@@ -310,7 +309,7 @@ class InvoiceService:
             year = today.year
         
         tenants = db.query(Tenant).filter(
-            Tenant.is_active.is_(True)
+            Tenant.is_active == True
         ).options(
             selectinload(Tenant.invoices)
         ).all()
