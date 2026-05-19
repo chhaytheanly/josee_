@@ -26,8 +26,10 @@ export const useUser = (id: number) => {
 export const useCreateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (userData: Partial<User>) => {
-      const { data } = await api.post<User>('/users', userData);
+    mutationFn: async (formData: FormData) => {
+      const { data } = await api.post<User>('/users', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return data;
     },
     onSuccess: () => {
@@ -39,8 +41,10 @@ export const useCreateUser = () => {
 export const useUpdateUser = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...userData }: Partial<User> & { id: number }) => {
-      const { data } = await api.put<User>(`/users/${id}`, userData);
+    mutationFn: async ({ id, data: formData }: { id: number; data: FormData }) => {
+      const { data } = await api.put<User>(`/users/${id}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
       return data;
     },
     onSuccess: (_, variables) => {

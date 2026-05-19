@@ -19,7 +19,13 @@ export default function Users() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({ name: '', email: '', password: '', role_id: '1' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    email: '', 
+    password: '', 
+    role_id: '1',
+    image: null as File | null
+  });
 
   const users = data?.data || [];
   const filteredUsers = users.filter((u: User) => 
@@ -29,16 +35,28 @@ export default function Users() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...form, role_id: parseInt(form.role_id) };
-    if (editing) {
-      const { password, ...rest } = payload;
-      await updateUser.mutateAsync({ id: editing.id, ...rest, ...(password ? { password } : {}) });
-    } else {
-      await createUser.mutateAsync(payload);
+    
+    const formData = new FormData();
+    formData.append('name', form.name);
+    formData.append('email', form.email);
+    formData.append('password', form.password);
+    formData.append('role_id', form.role_id);
+    if (form.image) {
+      formData.append('image', form.image);
     }
-    setOpen(false);
-    setEditing(null);
-    setForm({ name: '', email: '', password: '', role_id: '1' });
+
+    try {
+      if (editing) {
+        await updateUser.mutateAsync({ id: editing.id, data: formData });
+      } else {
+        await createUser.mutateAsync(formData);
+      }
+      setOpen(false);
+      setEditing(null);
+      setForm({ name: '', email: '', password: '', role_id: '1', image: null });
+    } catch (error) {
+      console.error('Error:', error);
+    }
   };
 
   if (isLoading) {
@@ -65,7 +83,7 @@ export default function Users() {
         <Button
           onClick={() => {
             setEditing(null);
-            setForm({ name: '', email: '', password: '', role_id: '1' });
+            setForm({ name: '', email: '', password: '', role_id: '1', image: null });
             setOpen(true);
           }}
           className="gap-2"
@@ -153,7 +171,7 @@ export default function Users() {
                           size="icon"
                           onClick={() => {
                             setEditing(u);
-                            setForm({ name: u.name, email: u.email, password: '', role_id: u.role_id.toString() });
+                            setForm({ name: u.name, email: u.email, password: '', role_id: u.role_id.toString(), image: null });
                             setOpen(true);
                           }}
                           className="h-8 w-8 text-muted-foreground"
@@ -231,6 +249,16 @@ export default function Users() {
                 <option value="2">Manager</option>
                 <option value="3">Staff</option>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Profile Image (Optional)</Label>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setForm({ ...form, image: e.target.files?.[0] || null })}
+                className="cursor-pointer"
+              />
+              {form.image && <p className="text-xs text-muted-foreground">Selected: {form.image.name}</p>}
             </div>
 
             <DialogFooter className="pt-4 mt-2">
