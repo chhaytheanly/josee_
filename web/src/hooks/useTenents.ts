@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../lib/api";
-import type { ApiResponse, Tenant } from "../lib/types/type";
+import type { ApiResponse, Tenant, AssignTenantPayload } from "../lib/types/type";
 
 export const useTenants = (params = {}) => {
   return useQuery({
@@ -46,4 +46,20 @@ export const useDeleteTenant = () => {
       queryClient.invalidateQueries({ queryKey: ['tenants'] });
     }
   });
+};
+
+export const useAssignTenant = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: AssignTenantPayload) => {
+      const { data } = await api.post<Tenant>('/tenants/assign', payload);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms']});
+    },
+  });
+
 };

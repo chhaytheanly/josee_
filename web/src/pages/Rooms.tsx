@@ -4,20 +4,27 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
+import { Select } from '../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { useState } from 'react';
-import { Plus, Pencil, Trash2, Loader2, Home as HomeIcon, Search } from 'lucide-react';
-import { useCreateRoom, useDeleteRoom, useRooms, useUpdateRoom } from '../hooks/useRooms';
-import type { Room } from '../lib/types/type';
+import { Plus, Pencil, Trash2, Loader2, Home as HomeIcon, Search, UserPlus } from 'lucide-react';
+import { useCreateRoom, useDeleteRoom, useRooms, useUpdateRoom, useAssignTenantToRoom } from '../hooks/useRooms';
+import { useTenants } from '../hooks/useTenents';
+import type { Room, Tenant } from '../lib/types/type';
 
 export default function Rooms() {
   const { data, isLoading } = useRooms();
+  const { data: tenantsData } = useTenants();
   const createRoom = useCreateRoom();
   const updateRoom = useUpdateRoom();
   const deleteRoom = useDeleteRoom();
+  const assignTenant = useAssignTenantToRoom();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Room | null>(null);
   const [form, setForm] = useState({ name: '', description: '', price: '' });
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<number | string>('');
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +35,34 @@ export default function Rooms() {
     setEditing(null);
     setForm({ name: '', description: '', price: '' });
   };
+
+  const handleAssignTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedRoom || !selectedTenant) return;
+
+    const tenant = tenantsData?.data?.find((t: Tenant) => t.id === parseInt(String(selectedTenant)));
+    if (!tenant) return;
+
+    try {
+      await assignTenant.mutateAsync({
+        roomId: selectedRoom.id,
+        tenantData: {
+          name: tenant.name,
+          email: tenant.email,
+          phone: tenant.phone,
+          id_card: tenant.id_card,
+        }
+      });
+      setAssignOpen(false);
+      setSelectedRoom(null);
+      setSelectedTenant('');
+    } catch (error) {
+      console.error('Failed to assign tenant:', error);
+    }
+  };
+
+  // Get list of unassigned tenants (those without a room_id)
+  const unassignedTenants = tenantsData?.data?.filter((t: Tenant) => !t.room_id && t.is_active) || [];
 
   if (isLoading) {
     return (
@@ -271,6 +306,22 @@ export default function Rooms() {
                     {/* Actions */}
                     <TableCell>
                       <div className="flex justify-end gap-2">
+                        {room.status === 'available' || room.is_available ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1"
+                            onClick={() => {
+                              setSelectedRoom(room);
+                              setSelectedTenant('');
+                              setAssignOpen(true);
+                            }}
+                            disabled={unassignedTenants.length === 0}
+                          >
+                            <UserPlus className="h-3.5 w-3.5" />
+                            Assign
+                          </Button>
+                        ) : null}
                         <Button
                           variant="outline"
                           size="sm"
@@ -318,110 +369,255 @@ export default function Rooms() {
         </CardContent>
       </Card>
 
-      {/* ================= DIALOG ================= */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {editing
-                ? 'Edit Room'
-                : 'Create New Room'}
-            </DialogTitle>
+       {/* ================= DIALOG ================= */}
+       <Dialog open={open} onOpenChange={setOpen}>
+         <DialogContent className="sm:max-w-lg">
+           <DialogHeader>
+             <DialogTitle className="text-xl">
+               {editing
+                 ? 'Edit Room'
+                 : 'Create New Room'}
+             </DialogTitle>
 
-            <DialogDescription>
-              {editing
-                ? 'Update room information and pricing.'
-                : 'Add a new room to your property.'}
-            </DialogDescription>
-          </DialogHeader>
+             <DialogDescription>
+               {editing
+                 ? 'Update room information and pricing.'
+                 : 'Add a new room to your property.'}
+             </DialogDescription>
+           </DialogHeader>
 
-          <form
-            onSubmit={submit}
-            className="space-y-5 pt-2"
-          >
-            {/* Room Name */}
-            <div className="space-y-2">
-              <Label>Room Name</Label>
+           <form
+             onSubmit={submit}
+             className="space-y-5 pt-2"
+           >
+             {/* Room Name */}
+             <div className="space-y-2">
+               <Label>Room Name</Label>
 
-              <Input
-                value={form.name}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    name: e.target.value,
-                  })
-                }
-                placeholder="Room 101"
-                required
-              />
-            </div>
+               <Input
+                 value={form.name}
+                 onChange={(e) =>
+                   setForm({
+                     ...form,
+                     name: e.target.value,
+                   })
+                 }
+                 placeholder="Room 101"
+                 required
+               />
+             </div>
 
-            {/* Description */}
-            <div className="space-y-2">
-              <Label>Description</Label>
+             {/* Description */}
+             <div className="space-y-2">
+               <Label>Description</Label>
 
-              <Input
-                value={form.description}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    description: e.target.value,
-                  })
-                }
-                placeholder="Optional description"
-              />
-            </div>
+               <Input
+                 value={form.description}
+                 onChange={(e) =>
+                   setForm({
+                     ...form,
+                     description: e.target.value,
+                   })
+                 }
+                 placeholder="Optional description"
+               />
+             </div>
 
-            {/* Price */}
-            <div className="space-y-2">
-              <Label>Monthly Price</Label>
+             {/* Price */}
+             <div className="space-y-2">
+               <Label>Monthly Price</Label>
 
-              <Input
-                type="number"
-                step="0.01"
-                value={form.price}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    price: e.target.value,
-                  })
-                }
-                placeholder="0.00"
-                required
-              />
-            </div>
+               <Input
+                 type="number"
+                 step="0.01"
+                 value={form.price}
+                 onChange={(e) =>
+                   setForm({
+                     ...form,
+                     price: e.target.value,
+                   })
+                 }
+                 placeholder="0.00"
+                 required
+               />
+             </div>
 
-            {/* Footer */}
-            <DialogFooter className="pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-              >
-                Cancel
-              </Button>
+             {/* Footer */}
+             <DialogFooter className="pt-4">
+               <Button
+                 type="button"
+                 variant="outline"
+                 onClick={() => setOpen(false)}
+               >
+                 Cancel
+               </Button>
 
-              <Button
-                type="submit"
-                disabled={
-                  createRoom.isPending ||
-                  updateRoom.isPending
-                }
-                className="gap-2"
-              >
-                {createRoom.isPending ||
-                  updateRoom.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : null}
+               <Button
+                 type="submit"
+                 disabled={
+                   createRoom.isPending ||
+                   updateRoom.isPending
+                 }
+                 className="gap-2"
+               >
+                 {createRoom.isPending ||
+                   updateRoom.isPending ? (
+                   <Loader2 className="h-4 w-4 animate-spin" />
+                 ) : null}
 
-                {editing
-                  ? 'Update Room'
-                  : 'Create Room'}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+                 {editing
+                   ? 'Update Room'
+                   : 'Create Room'}
+               </Button>
+             </DialogFooter>
+           </form>
+         </DialogContent>
+       </Dialog>
+
+       {/* ================= ASSIGN TENANT DIALOG ================= */}
+       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+         <DialogContent className="sm:max-w-lg">
+           <DialogHeader>
+             <DialogTitle className="text-xl">
+               Assign Tenant to Room
+             </DialogTitle>
+
+             <DialogDescription>
+               Select an available tenant and assign them to{' '}
+               <span className="font-semibold text-foreground">
+                 {selectedRoom?.name}
+               </span>
+             </DialogDescription>
+           </DialogHeader>
+
+           <form
+             onSubmit={handleAssignTenant}
+             className="space-y-5 pt-2"
+           >
+             {/* Room Info */}
+             <div className="rounded-lg bg-muted/50 p-4">
+               <p className="text-sm text-muted-foreground">
+                 Assigning to
+               </p>
+               <p className="font-semibold">
+                 {selectedRoom?.name}
+               </p>
+               <p className="text-sm text-muted-foreground">
+                 ${selectedRoom?.price.toFixed(2)} monthly
+               </p>
+             </div>
+
+             {/* Tenant Selection */}
+             <div className="space-y-2">
+               <Label htmlFor="tenant">
+                 Select Tenant
+               </Label>
+
+               {unassignedTenants.length === 0 ? (
+                 <div className="rounded-lg border border-dashed border-amber-200 bg-amber-50 p-4 text-center dark:border-amber-900 dark:bg-amber-950">
+                   <p className="text-sm text-amber-700 dark:text-amber-300">
+                     No available tenants to assign
+                   </p>
+                 </div>
+               ) : (
+                 <Select
+                   id="tenant"
+                   value={String(selectedTenant)}
+                   onChange={(e) =>
+                     setSelectedTenant(
+                       e.target.value ? parseInt(e.target.value) : ''
+                     )
+                   }
+                   required
+                 >
+                   <option value="">
+                     Choose a tenant...
+                   </option>
+                   {unassignedTenants.map((tenant: Tenant) => (
+                     <option key={tenant.id} value={tenant.id}>
+                       {tenant.name}{' '}
+                       {tenant.email ? `(${tenant.email})` : ''}
+                     </option>
+                   ))}
+                 </Select>
+               )}
+             </div>
+
+             {/* Tenant Details */}
+             {selectedTenant && (
+               <div className="rounded-lg border border-border/50 p-4">
+                 {unassignedTenants
+                   .filter((t: Tenant) => t.id === selectedTenant)
+                   .map((tenant: Tenant) => (
+                     <div
+                       key={tenant.id}
+                       className="space-y-2"
+                     >
+                       <div>
+                         <p className="text-sm text-muted-foreground">
+                           Name
+                         </p>
+                         <p className="font-medium">
+                           {tenant.name}
+                         </p>
+                       </div>
+                       {tenant.email && (
+                         <div>
+                           <p className="text-sm text-muted-foreground">
+                             Email
+                           </p>
+                           <p className="font-medium">
+                             {tenant.email}
+                           </p>
+                         </div>
+                       )}
+                       {tenant.phone && (
+                         <div>
+                           <p className="text-sm text-muted-foreground">
+                             Phone
+                           </p>
+                           <p className="font-medium">
+                             {tenant.phone}
+                           </p>
+                         </div>
+                       )}
+                     </div>
+                   ))}
+               </div>
+             )}
+
+             {/* Footer */}
+             <DialogFooter className="pt-4">
+               <Button
+                 type="button"
+                 variant="outline"
+                 onClick={() => {
+                   setAssignOpen(false);
+                   setSelectedRoom(null);
+                   setSelectedTenant('');
+                 }}
+               >
+                 Cancel
+               </Button>
+
+               <Button
+                 type="submit"
+                 disabled={
+                   !selectedTenant ||
+                   assignTenant.isPending
+                 }
+                 className="gap-2"
+               >
+                 {assignTenant.isPending ? (
+                   <Loader2 className="h-4 w-4 animate-spin" />
+                 ) : null}
+
+                 Assign Tenant
+               </Button>
+             </DialogFooter>
+           </form>
+         </DialogContent>
+       </Dialog>
     </div>
   );
 }
