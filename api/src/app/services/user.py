@@ -71,6 +71,7 @@ class UserService:
         )
         
         db.add(user)
+        db.commit()
         db.flush()
         db.refresh(user)
         
