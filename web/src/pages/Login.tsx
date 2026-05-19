@@ -5,10 +5,12 @@ import { api } from '../lib/api';
 
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '../components/ui/card';
@@ -18,7 +20,6 @@ import {
   ShieldCheck,
   Mail,
   Lock,
-  ArrowRight,
 } from 'lucide-react';
 
 export default function Login() {
@@ -75,116 +76,83 @@ export default function Login() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10">
-      {/* Background Glow */}
-      <div className="absolute inset-0 -z-10">
-        <div className="absolute left-[-10%] top-[-10%] h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute bottom-[-10%] right-[-10%] h-72 w-72 rounded-full bg-blue-500/10 blur-3xl" />
-      </div>
-
-      <Card className="w-full max-w-md border-border/50 bg-background/95 shadow-2xl backdrop-blur">
-        <CardHeader className="space-y-4 text-center">
-          {/* Logo */}
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 ring-1 ring-primary/20">
-            <ShieldCheck className="h-8 w-8 text-primary" />
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <Card className="w-full max-w-sm shadow-md">
+        <CardHeader className="space-y-3 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+            <ShieldCheck className="h-6 w-6 text-primary" />
           </div>
-
           <div className="space-y-1">
-            <CardTitle className="text-3xl font-bold tracking-tight">
+            <CardTitle className="text-2xl font-semibold tracking-tight">
               Admin Portal
             </CardTitle>
-
-            <CardDescription className="text-sm text-muted-foreground">
-              Sign in to manage your dashboard and system
+            <CardDescription>
+              Enter your email and password to sign in
             </CardDescription>
           </div>
         </CardHeader>
-
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-5">
-            {/* Email */}
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Email Address
-              </label>
-
+              <Label htmlFor="email">Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="email"
                   type="email"
                   placeholder="name@example.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="h-11 pl-10"
+                  className="pl-9"
                   required
                 />
               </div>
             </div>
-
-            {/* Password */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">
-                  Password
-                </label>
-
+                <Label htmlFor="password">Password</Label>
                 <button
                   type="button"
-                  className="text-xs text-primary transition hover:underline"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
                   Forgot password?
                 </button>
               </div>
-
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-
+                <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="••••••••"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
-                  className="h-11 pl-10"
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="pl-9"
                   required
                 />
               </div>
             </div>
 
-            {/* Error */}
             {error && (
-              <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
 
-            {/* Submit */}
             <Button
               type="submit"
               disabled={loading}
-              className="h-11 w-full text-sm font-medium"
+              className="w-full"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                <>
-                  Sign In
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign In
             </Button>
-
-            {/* Footer */}
-            <div className="pt-2 text-center text-xs text-muted-foreground">
-              Protected admin access • Secure authentication
-            </div>
           </form>
         </CardContent>
+        <CardFooter className="flex justify-center border-t p-4">
+          <p className="text-xs text-muted-foreground">
+            Protected admin access • Secure authentication
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );

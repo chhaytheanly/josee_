@@ -8,10 +8,6 @@ logger = logging.getLogger(__name__)
 SessionLocal = local_session
 
 def run_monthly_billing():
-    """
-    Generate invoices for all active tenants (Monthly)
-    Called by APScheduler on 1st of every month
-    """
     db = SessionLocal()
     
     try:
@@ -37,10 +33,6 @@ def run_monthly_billing():
 
 
 def run_daily_late_fees():
-    """
-    Mark overdue invoices as late and apply fees (Daily)
-    Called by APScheduler every day
-    """
     db = SessionLocal()
     
     try:
@@ -64,13 +56,7 @@ def run_daily_late_fees():
 
 
 def generate_tenant_invoice_sync(tenant_id: int, room_id: int, year: int, month: int, check_in_date: date = None):
-    """
-    Generate invoice for a specific tenant (synchronous)
-    Called when tenant is assigned mid-month
-    
-    Note: This runs synchronously in the API request
-    For small projects, this is acceptable
-    """
+
     db = SessionLocal()
     
     try:

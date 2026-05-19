@@ -56,3 +56,13 @@ export interface ApiResponse<T> {
     summary?: Record<string, number>;
   };
 }
+
+export interface AssignTenantPayload {
+  room_id: number;
+  tenant_data: {
+    name: string;
+    email?: string;
+    phone?: string;
+    id_card?: string;
+  };
+}

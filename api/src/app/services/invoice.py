@@ -11,16 +11,18 @@ from src.app.model.room import Room
 from src.app.model.tenant import Tenant
 
 
+LATE_FEE_PERCENTAGE = 0.05
+
+
 class InvoiceService:
     
     @staticmethod
     def _calculate_prorated_amount(room_price: float, check_in_date: date, invoice_date: date) -> float:
-        """Calculate prorated rent for partial month"""
         days_in_month = calendar.monthrange(invoice_date.year, invoice_date.month)[1]
         remaining_days = days_in_month - check_in_date.day + 1
         
         if remaining_days <= 0:
-            return room_price  # Full month if check-in was before month start
+            return room_price
         
         return round((room_price / days_in_month) * remaining_days, 2)
     
@@ -31,12 +33,9 @@ class InvoiceService:
         room_id: int, 
         for_date: date, 
         is_first_invoice: bool = False, 
-        check_in_date: date = None
+        check_in_date: Optional[date] = None
     ) -> Invoice:
-        """
-        Generate monthly invoice for a tenant
-        """
-        # Idempotency check
+        """Generate monthly invoice for a tenant"""
         existing = db.query(Invoice).filter(
             Invoice.tenant_id == tenant_id,
             Invoice.year == for_date.year,
@@ -50,12 +49,11 @@ class InvoiceService:
         if not room:
             raise ValueError("Room not found")
         
-        # Calculate amount (apply proration if needed)
-        amount = room.price
+        amount = float(room.price)
         
         if is_first_invoice and check_in_date:
             amount = InvoiceService._calculate_prorated_amount(
-                room.price, check_in_date, for_date
+                float(room.price), check_in_date, for_date
             )
         
         invoice = Invoice(
@@ -66,22 +64,21 @@ class InvoiceService:
             amount=amount,
             due_date=for_date.replace(day=5),
             status=InvoiceStatus.pending,
-            amount_paid=0
+            amount_paid=0.0
         )
         
         db.add(invoice)
+        db.flush()
         return invoice
     
     @staticmethod
-    def generate_all_monthly_invoices(db: Session, for_date: date = None) -> Dict[str, Any]:
-        """
-        Generate invoices for ALL active tenants
-        """
+    def generate_all_monthly_invoices(db: Session, for_date: Optional[date] = None) -> Dict[str, Any]:
+        """Generate invoices for ALL active tenants"""
         if for_date is None:
             for_date = date.today()
         
         active_tenants = db.query(Tenant).filter(
-            Tenant.is_active.is_(True),
+            Tenant.is_active == True,
             Tenant.room_id.isnot(None)
         ).all()
         
@@ -100,7 +97,7 @@ class InvoiceService:
                 if existing:
                     skipped += 1
                 else:
-                    invoice = InvoiceService.generate_invoice(
+                    InvoiceService.generate_invoice(
                         db, 
                         tenant.id, 
                         tenant.room_id, 
@@ -108,10 +105,9 @@ class InvoiceService:
                         is_first_invoice=False
                     )
                     created += 1
-            except Exception as e:
+            except Exception:
                 failed += 1
-                continue
-
+        
         return {
             "invoices_created": created, 
             "invoices_skipped": skipped,
@@ -121,11 +117,10 @@ class InvoiceService:
     
     @staticmethod
     def update_late_invoices(db: Session, grace_period_days: int = 3) -> Dict[str, int]:
-        """
-        Mark invoices as late and apply late fee
-        """
+        """Mark invoices as late and apply late fee"""
         today = date.today()
         late_threshold = today - relativedelta(days=grace_period_days)
+        
         overdue = db.query(Invoice).filter(
             Invoice.status == InvoiceStatus.pending,
             Invoice.due_date < late_threshold
@@ -135,11 +130,11 @@ class InvoiceService:
         for invoice in overdue:
             if invoice.status != InvoiceStatus.late:
                 invoice.status = InvoiceStatus.late
-                late_fee = invoice.amount * 0.05 
-                invoice.amount += late_fee
-                
+                late_fee = float(invoice.amount) * LATE_FEE_PERCENTAGE
+                invoice.amount = float(invoice.amount) + late_fee
                 marked_late += 1
         
+        db.flush()
         return {"marked_late": marked_late}
     
     @staticmethod
@@ -147,11 +142,9 @@ class InvoiceService:
         db: Session, 
         invoice_id: int, 
         amount: float, 
-        image: str = None
+        image: Optional[str] = None
     ) -> Payment:
-        """
-        Record payment and update invoice status
-        """
+        """Record payment and update invoice status"""
         invoice = db.query(Invoice).filter(Invoice.id == invoice_id).first()
         if not invoice:
             raise ValueError("Invoice not found")
@@ -159,19 +152,19 @@ class InvoiceService:
         if amount <= 0:
             raise ValueError("Payment amount must be greater than 0")
 
-        remaining_balance = invoice.amount - invoice.amount_paid
-        if amount > remaining_balance:
-            amount = remaining_balance
+        remaining_balance = float(invoice.amount) - float(invoice.amount_paid)
+        payment_amount = min(amount, remaining_balance)
         
         payment = Payment(
             invoice_id=invoice_id,
-            amount=amount,
+            amount=payment_amount,
             image=image,
             status=PaymentStatus.completed,
-            paid_at=datetime.now(timezone.utc)
+            paid_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc)
         )
         
-        invoice.amount_paid += amount
+        invoice.amount_paid = float(invoice.amount_paid) + payment_amount
 
         if invoice.amount_paid >= invoice.amount:
             invoice.status = InvoiceStatus.paid
@@ -180,12 +173,12 @@ class InvoiceService:
             invoice.status = InvoiceStatus.late
         
         db.add(payment)
+        db.flush()
         return payment
     
     @staticmethod
     def get_invoice_by_id(db: Session, invoice_id: int) -> Invoice:
         """Get single invoice with details"""
-
         invoice = db.query(Invoice).options(
             selectinload(Invoice.room),
             selectinload(Invoice.tenant),
@@ -199,7 +192,6 @@ class InvoiceService:
     @staticmethod
     def get_payment_report(db: Session, month: int, year: int) -> Dict[str, Any]:
         """Generate payment report for a specific month"""
-
         invoices = db.query(Invoice).options(
             selectinload(Invoice.room),
             selectinload(Invoice.tenant)
@@ -214,9 +206,9 @@ class InvoiceService:
                 "year": year,
                 "summary": {
                     "total_invoices": 0,
-                    "total_expected": 0,
-                    "total_received": 0,
-                    "collection_rate": 0,
+                    "total_expected": 0.0,
+                    "total_received": 0.0,
+                    "collection_rate": 0.0,
                     "paid_count": 0,
                     "pending_count": 0,
                     "late_count": 0
@@ -224,8 +216,8 @@ class InvoiceService:
                 "data": []
             }
         
-        total_expected = sum(inv.amount for inv in invoices)
-        total_received = sum(inv.amount_paid for inv in invoices)
+        total_expected = sum(float(inv.amount) for inv in invoices)
+        total_received = sum(float(inv.amount_paid) for inv in invoices)
         paid_count = sum(1 for inv in invoices if inv.status == InvoiceStatus.paid)
         pending_count = sum(1 for inv in invoices if inv.status == InvoiceStatus.pending)
         late_count = sum(1 for inv in invoices if inv.status == InvoiceStatus.late)
@@ -248,9 +240,9 @@ class InvoiceService:
             "year": year,
             "summary": {
                 "total_invoices": len(invoices),
-                "total_expected": float(total_expected),
-                "total_received": float(total_received),
-                "collection_rate": round((total_received / total_expected * 100), 2) if total_expected > 0 else 0,
+                "total_expected": total_expected,
+                "total_received": total_received,
+                "collection_rate": round((total_received / total_expected * 100), 2) if total_expected > 0 else 0.0,
                 "paid_count": paid_count,
                 "pending_count": pending_count,
                 "late_count": late_count
@@ -262,20 +254,15 @@ class InvoiceService:
     def get_tenant_payment_status(
         db: Session, 
         tenant_id: int, 
-        month: int = None, 
-        year: int = None
+        month: Optional[int] = None, 
+        year: Optional[int] = None
     ) -> Dict[str, Any]:
-        """
-        Get payment status for a specific tenant
-        Returns current month status by default
-        """
-        # Default to current month
+        """Get payment status for a specific tenant"""
         if month is None or year is None:
             today = date.today()
             month = today.month
             year = today.year
         
-        # Get tenant's invoice for the month
         invoice = db.query(Invoice).filter(
             Invoice.tenant_id == tenant_id,
             Invoice.month == month,
@@ -288,9 +275,9 @@ class InvoiceService:
                 "month": month,
                 "year": year,
                 "status": "no_invoice",
-                "amount_due": 0,
-                "amount_paid": 0,
-                "total_amount": 0,
+                "amount_due": 0.0,
+                "amount_paid": 0.0,
+                "total_amount": 0.0,
                 "due_date": None,
                 "paid_at": None,
                 "invoice_id": None
@@ -301,7 +288,7 @@ class InvoiceService:
             "month": month,
             "year": year,
             "status": invoice.status.value,
-            "amount_due": round(invoice.amount - invoice.amount_paid, 2),
+            "amount_due": round(float(invoice.amount) - float(invoice.amount_paid), 2),
             "amount_paid": float(invoice.amount_paid),
             "total_amount": float(invoice.amount),
             "due_date": invoice.due_date.isoformat(),
@@ -312,21 +299,17 @@ class InvoiceService:
     @staticmethod
     def get_all_tenants_payment_status(
         db: Session, 
-        month: int = None, 
-        year: int = None
+        month: Optional[int] = None, 
+        year: Optional[int] = None
     ) -> Dict[str, Any]:
-        """
-        Get payment status for ALL active tenants
-        """
-        # Default to current month
+        """Get payment status for ALL active tenants"""
         if month is None or year is None:
             today = date.today()
             month = today.month
             year = today.year
         
-        # Get all active tenants with their invoices
         tenants = db.query(Tenant).filter(
-            Tenant.is_active.is_(True)
+            Tenant.is_active == True
         ).options(
             selectinload(Tenant.invoices)
         ).all()
@@ -340,31 +323,26 @@ class InvoiceService:
             status["room_id"] = tenant.room_id
             results.append(status)
         
-        # Summary stats
-        summary = {
-            "total_tenants": len(results),
-            "paid": sum(1 for r in results if r["status"] == "paid"),
-            "pending": sum(1 for r in results if r["status"] == "pending"),
-            "late": sum(1 for r in results if r["status"] == "late"),
-            "no_invoice": sum(1 for r in results if r["status"] == "no_invoice"),
-            "collection_rate": round(
-                (sum(1 for r in results if r["status"] == "paid") / len(results) * 100) 
-                if results else 0, 2
-            )
-        }
+        total = len(results)
+        paid_count = sum(1 for r in results if r["status"] == "paid")
         
         return {
             "month": month,
             "year": year,
-            "summary": summary,
+            "summary": {
+                "total_tenants": total,
+                "paid": paid_count,
+                "pending": sum(1 for r in results if r["status"] == "pending"),
+                "late": sum(1 for r in results if r["status"] == "late"),
+                "no_invoice": sum(1 for r in results if r["status"] == "no_invoice"),
+                "collection_rate": round((paid_count / total * 100), 2) if total > 0 else 0.0
+            },
             "data": results
         }
     
     @staticmethod
-    def get_late_payers(db: Session, month: int = None, year: int = None) -> List[Dict[str, Any]]:
-        """
-        Get list of tenants with late payments
-        """
+    def get_late_payers(db: Session, month: Optional[int] = None, year: Optional[int] = None) -> List[Dict[str, Any]]:
+        """Get list of tenants with late payments"""
         if month is None or year is None:
             today = date.today()
             month = today.month
@@ -386,7 +364,7 @@ class InvoiceService:
                 "tenant_name": inv.tenant.name if inv.tenant else "Unknown",
                 "tenant_email": inv.tenant.email if inv.tenant else None,
                 "room_name": inv.room.name if inv.room else "Unknown",
-                "amount_due": float(inv.amount - inv.amount_paid),
+                "amount_due": float(inv.amount) - float(inv.amount_paid),
                 "due_date": inv.due_date.isoformat(),
                 "days_overdue": (date.today() - inv.due_date).days
             }

@@ -70,18 +70,18 @@ def create_user(
     
 @user_router.get("/setup-form")
 def setup_form(db: Session = Depends(get_db)):
-    return UserService.setup_form(db)
+    return UserService.get_setup_form(db)
     
 @user_router.get("/{id}", response_model=UserResponse)
 def get_user_by_id(id: int, db: Session = Depends(get_db)):
     try:
-        return UserService.getUserById(db, id)
+        return UserService.get_user_by_id(db, id)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     
 @user_router.get("")
 def get_all_users(db: Session = Depends(get_db), page: int = 1, limit: int = 10):
-    return  UserService.getAll(db, page, limit)
+    return  UserService.get_all_users(db, page, limit)
     
 @user_router.put("/{id}", response_model=UserResponse)
 def update_user(

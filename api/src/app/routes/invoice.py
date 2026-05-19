@@ -57,7 +57,7 @@ def get_invoices(
     invoices = query.offset((page - 1) * limit).limit(limit).all()
 
     return {
-        "data": invoices,
+        "data": [InvoiceResponse.model_validate(inv) for inv in invoices],
         "meta": {
             "page": page,
             "limit": limit,
@@ -91,7 +91,7 @@ def generate_invoice(
 
         db.commit()
         db.refresh(invoice)
-        return invoice
+        return InvoiceResponse.model_validate(invoice)
 
     except ValueError as e:
         db.rollback()
@@ -101,9 +101,6 @@ def generate_invoice(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ===============================
-# GENERATE ALL INVOICES (BODY FIXED)
-# ===============================
 @invoice_router.post("/generate-all")
 def generate_all_invoices(
     data: GenerateAllRequest,
@@ -145,7 +142,7 @@ def record_payment(
 
         db.commit()
         db.refresh(result)
-        return result
+        return PaymentResponse.model_validate(result)
 
     except ValueError as e:
         db.rollback()
@@ -229,6 +226,6 @@ def get_invoice(
         if tenant and invoice.tenant_id != tenant.id:
             raise HTTPException(status_code=403, detail="Cannot access other tenants invoices")
 
-        return invoice
+        return InvoiceResponse.model_validate(invoice)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
