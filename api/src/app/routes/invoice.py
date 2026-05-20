@@ -1,9 +1,8 @@
 from datetime import date
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, selectinload
-
 from src.app.config.session import get_db
 from src.app.middleware.guard.permission import PermissionGuard
 from src.app.model.invoice import Invoice
@@ -17,6 +16,7 @@ from src.app.schema.invoice import (
     ApplyLateFeesRequest,
 )
 from src.app.services.invoice import InvoiceService
+from src.app.services.invoice_pdf import InvoicePDFService
 
 invoice_router = APIRouter(prefix="/invoices", tags=["Invoices"])
 
@@ -229,3 +229,29 @@ def get_invoice(
         return InvoiceResponse.model_validate(invoice)
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
+
+
+@invoice_router.get("/{invoice_id}/download")
+def download_invoice_pdf(
+    invoice_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(PermissionGuard.allow_roles("admin", "staff", "tenant")),
+):
+    try:
+        invoice = InvoiceService.get_invoice_by_id(db, invoice_id)
+        tenant = PermissionGuard.resolve_tenant_for_user(db, current_user)
+        if tenant and invoice.tenant_id != tenant.id:
+            raise HTTPException(status_code=403, detail="Cannot download other tenants invoices")
+
+        pdf_bytes = InvoicePDFService.generate_invoice_pdf(db, invoice_id)
+        filename = InvoicePDFService.get_filename(invoice)
+
+        return StreamingResponse(
+            iter([pdf_bytes]),
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
