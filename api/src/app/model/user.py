@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Identity, CheckConstraint
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Identity, CheckConstraint, DateTime
 from sqlalchemy.orm import relationship
 
 from src.app.config.base import Base
@@ -18,3 +18,6 @@ class User(Base):
 
     role_id = Column(Integer, ForeignKey("roles.id"), nullable=False)
     role = relationship("Role", back_populates="users")
+
+    reset_token = Column(String(255), nullable=True)
+    reset_token_expiry = Column(DateTime, nullable=True)
