@@ -3,6 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Home, Receipt, Moon, Sun, LogOut, ShieldAlert, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { Button } from '../ui/button';
+import { getImageUrl } from '../../lib/image';
 
 export function DashboardLayout() {
   const [theme, setTheme] = useState(() => {
@@ -16,12 +17,6 @@ export function DashboardLayout() {
   const { user, logout } = useAuth();
   const location = useLocation();
   const isDark = theme === 'dark';
-
-  const getImageUrl = (path?: string) => {
-    if (!path) return '';
-    if (path.startsWith('http')) return path;
-    return `http://localhost:8000/${path}`;
-  };
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
