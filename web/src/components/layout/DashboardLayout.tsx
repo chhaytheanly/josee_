@@ -3,15 +3,25 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Users, Home, Receipt, Moon, Sun, LogOut, ShieldAlert, ChevronRight } from 'lucide-react';
 import { useAuth } from '../../store/useAuth';
 import { Button } from '../ui/button';
+import { getImageUrl } from '../../lib/image';
 
 export function DashboardLayout() {
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('theme');
+      if (stored === 'dark' || stored === 'light') return stored;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'light';
+  });
   const { user, logout } = useAuth();
   const location = useLocation();
+  const isDark = theme === 'dark';
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDark);
-  }, [isDark]);
+    localStorage.setItem('theme', theme);
+  }, [isDark, theme]);
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -72,11 +82,15 @@ export function DashboardLayout() {
         <div className="p-4 border-t border-border space-y-3">
           <div className="px-3 py-3 rounded-lg bg-muted/50 border border-border/50">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-sm">
-                A
-              </div>
+              {user?.image ? (
+                <img src={getImageUrl(user.image)} alt={user.name} className="h-8 w-8 rounded-full object-cover shadow-sm" />
+              ) : (
+                <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-bold shadow-sm">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-foreground truncate">Admin User</p>
+                <p className="text-sm font-semibold text-foreground truncate">{user?.name || 'User'}</p>
                 <p className="text-xs text-muted-foreground">{getRoleLabel()}</p>
               </div>
             </div>
@@ -103,7 +117,7 @@ export function DashboardLayout() {
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setIsDark(!isDark)}
+              onClick={() => setTheme(isDark ? 'light' : 'dark')}
               className="h-8 w-8 rounded-md"
             >
               <Moon 

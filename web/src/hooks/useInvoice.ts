@@ -105,3 +105,27 @@ export const useTenantPaymentStatus = (tenantId?: number) => {
     }
   });
 };
+
+export const useDownloadInvoice = () => {
+  return useMutation({
+    mutationFn: async (invoiceId: number) => {
+      const response = await api.get(`/invoices/${invoiceId}/download`, {
+        responseType: 'blob',
+      });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `invoice-${invoiceId}.pdf`;
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) filename = filenameMatch[1];
+      }
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  });
+};
