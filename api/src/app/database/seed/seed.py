@@ -62,11 +62,11 @@ def seed_data(db: Session, num_tenants: int = 10, num_rooms: int = 8):
     staff_role = db.query(Role).filter(Role.name == "Staff").first()
     
     # ==================== 2. Seed Admin User ====================
-    if db.query(User).filter(User.email == "admin@example.com").count() == 0:
+    if db.query(User).filter(User.email == "lychhaythean1122@gmail.com").count() == 0:
         admin = User(
-            name="Admin User",
-            email="admin@example.com",
-            password=hash_password("admin123"),
+            name="Chhaythean LY",
+            email="lychhaythean1122@gmail.com",
+            password=hash_password("12345678"),
             role_id=admin_role.id,
             image="uploads/avatars/admin.jpg"
         )
@@ -142,26 +142,26 @@ def seed_data(db: Session, num_tenants: int = 10, num_rooms: int = 8):
     
     # ==================== 5. Seed Tenants (Direct Room Assignment) ====================
     tenant_profiles = [
-        {"name": "Alice Johnson", "email": "alice.j@email.com", "phone": "012-345-6789", "id_card": "ID001234"},
-        {"name": "Bob Smith", "email": "bob.s@email.com", "phone": "012-456-7890", "id_card": "ID002345"},
-        {"name": "Charlie Brown", "email": "charlie.b@email.com", "phone": "012-567-8901", "id_card": "ID003456"},
-        {"name": "Diana Lee", "email": "diana.l@email.com", "phone": "012-678-9012", "id_card": "ID004567"},
-        {"name": "Ethan Wong", "email": "ethan.w@email.com", "phone": "012-789-0123", "id_card": "ID005678"},
-        {"name": "Fiona Chen", "email": "fiona.c@email.com", "phone": "012-890-1234", "id_card": "ID006789"},
-        {"name": "George Kim", "email": "george.k@email.com", "phone": "012-901-2345", "id_card": "ID007890"},
-        {"name": "Hannah Park", "email": "hannah.p@email.com", "phone": "012-012-3456", "id_card": "ID008901"},
-        {"name": "Isaac Tan", "email": "isaac.t@email.com", "phone": "012-123-4567", "id_card": "ID009012"},
-        {"name": "Julia Nguyen", "email": "julia.n@email.com", "phone": "012-234-5678", "id_card": "ID010123"},
-        {"name": "Kevin Lim", "email": "kevin.l@email.com", "phone": "012-345-6780", "id_card": "ID011234"},
-        {"name": "Lisa Wong", "email": "lisa.w@email.com", "phone": "012-456-7891", "id_card": "ID012345"},
-        {"name": "Marcus Lee", "email": "marcus.l@email.com", "phone": "012-567-8902", "id_card": "ID013456"},
-        {"name": "Nina Patel", "email": "nina.p@email.com", "phone": "012-678-9013", "id_card": "ID014567"},
-        {"name": "Oscar Chen", "email": "oscar.c@email.com", "phone": "012-789-0124", "id_card": "ID015678"},
-        {"name": "Paula Kim", "email": "paula.k@email.com", "phone": "012-890-1235", "id_card": "ID016789"},
-        {"name": "Quinn Tan", "email": "quinn.t@email.com", "phone": "012-901-2346", "id_card": "ID017890"},
-        {"name": "Rachel Ng", "email": "rachel.n@email.com", "phone": "012-012-3457", "id_card": "ID018901"},
-        {"name": "Samuel Ho", "email": "samuel.h@email.com", "phone": "012-123-4568", "id_card": "ID019012"},
-        {"name": "Tina Zhao", "email": "tina.z@email.com", "phone": "012-234-5679", "id_card": "ID020123"}
+        {"name": "Sok Dara", "email": "sok.dara@gmail.com", "phone": "012345678", "id_card": "010203040"},
+        {"name": "Chantha Vann", "email": "chantha.vann@gmail.com", "phone": "015234567", "id_card": "020304051"},
+        {"name": "Kimly Heng", "email": "kimly.heng@gmail.com", "phone": "017456789", "id_card": "030405062"},
+        {"name": "Piseth Chea", "email": "piseth.chea@gmail.com", "phone": "088123456", "id_card": "040506073"},
+        {"name": "Sreynich Lim", "email": "sreynich.lim@gmail.com", "phone": "097234567", "id_card": "050607084"},
+        {"name": "Vuthy Sok", "email": "vuthy.sok@gmail.com", "phone": "096345678", "id_card": "060708095"},
+        {"name": "Rithy Oun", "email": "rithy.oun@gmail.com", "phone": "093456789", "id_card": "070809106"},
+        {"name": "Dalin Chhouk", "email": "dalin.chhouk@gmail.com", "phone": "092567890", "id_card": "080910117"},
+        {"name": "Sophy Meas", "email": "sophy.meas@gmail.com", "phone": "098678901", "id_card": "091011128"},
+        {"name": "Makara Tep", "email": "makara.tep@gmail.com", "phone": "089789012", "id_card": "101112139"},
+        {"name": "Bopha Ngin", "email": "bopha.ngin@gmail.com", "phone": "086890123", "id_card": "111213140"},
+        {"name": "Kosal Yin", "email": "kosal.yin@gmail.com", "phone": "085901234", "id_card": "121314151"},
+        {"name": "Sokunthea Phan", "email": "sokunthea.phan@gmail.com", "phone": "081012345", "id_card": "131415162"},
+        {"name": "Narith Keo", "email": "narith.keo@gmail.com", "phone": "077123456", "id_card": "141516173"},
+        {"name": "Monyka Hor", "email": "monyka.hor@gmail.com", "phone": "078234567", "id_card": "151617184"},
+        {"name": "Ravy Touch", "email": "ravy.touch@gmail.com", "phone": "076345678", "id_card": "161718195"},
+        {"name": "Chenda Prak", "email": "chenda.prak@gmail.com", "phone": "071456789", "id_card": "171819206"},
+        {"name": "Virak Chhim", "email": "virak.chhim@gmail.com", "phone": "031567890", "id_card": "181920217"},
+        {"name": "Pich Seyha", "email": "pich.seyha@gmail.com", "phone": "060678901", "id_card": "192021228"},
+        {"name": "Thida Koun", "email": "thida.koun@gmail.com", "phone": "066789012", "id_card": "202122239"}
     ]
     
     # Get occupied rooms (is_available=False)

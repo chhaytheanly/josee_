@@ -49,6 +49,9 @@ export default function Login() {
 
       setAuth(res.data.access_token, {
         id: String(decoded.sub),
+        name: res.data.user.name,
+        email: res.data.user.email,
+        image: res.data.user.image,
         role: String(decoded.role),
       });
 

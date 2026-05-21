@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '../components/ui/dialog';
 import { useState } from 'react';
 import { Plus, DollarSign, Loader2, RefreshCw, AlertTriangle, Receipt, Download, Search } from 'lucide-react';
-import { useApplyLateFees, useGenerateAllInvoices, useGenerateInvoice, useInvoices, useRecordPayment } from '../hooks/useInvoice';
+import { useApplyLateFees, useDownloadInvoice, useGenerateAllInvoices, useGenerateInvoice, useInvoices, useRecordPayment } from '../hooks/useInvoice';
 import type { Invoice } from '../lib/types/type';
 
 export default function Invoices() {
@@ -15,6 +15,7 @@ export default function Invoices() {
   const generateAll = useGenerateAllInvoices();
   const recordPayment = useRecordPayment();
   const applyLateFees = useApplyLateFees();
+  const downloadInvoice = useDownloadInvoice();
   
   const [open, setOpen] = useState(false);
   const [payOpen, setPayOpen] = useState(false);
@@ -220,8 +221,14 @@ export default function Invoices() {
                         >
                           <DollarSign className="h-4 w-4 mr-1.5" /> Pay
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                          <Download className="h-4 w-4" />
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground"
+                          onClick={() => downloadInvoice.mutate(inv.id)}
+                          disabled={downloadInvoice.isPending}
+                        >
+                          {downloadInvoice.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         </Button>
                       </div>
                     </TableCell>
