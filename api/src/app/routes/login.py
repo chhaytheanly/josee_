@@ -7,7 +7,7 @@ from src.app.config.config import settings
 from src.app.config.logger import security_logger
 from src.app.config.session import get_db
 from src.app.middleware.jwt_service import JWTService
-from src.app.schema.user import LoginRequest, Token
+from src.app.schema.user import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest, Token
 from src.app.services.user import UserService
 from src.app.utils.device_tracker import DeviceTracker
 
@@ -33,3 +33,19 @@ def login( request: Request,data: LoginRequest, db: Session = Depends(get_db)):
     )
     
     return {"access_token": access_token, "token_type": "bearer", "info": info}
+
+@loggin_router.post("/forgot-password")
+async def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        result = await UserService.forgot_password(db, data.email)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return result
+
+@loggin_router.post("/reset-password")
+def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        result = UserService.reset_password(db, data.token, data.new_password)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    return result

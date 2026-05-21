@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -17,17 +16,22 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
 from src.app.config.base import Base
+from src.app.config.config import settings
 from src.app.model import Role, Room, Tenant, User, Invoice, Payment  # noqa: F401
 
 target_metadata = Base.metadata
+
+database_url = settings.DATABASE_URL or config.get_main_option("sqlalchemy.url")
+if database_url:
+    config.set_main_option("sqlalchemy.url", database_url)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
-
-config.set_main_option("sqlalchemy.url", os.getenv("DATABASE_URL"))
 
 
 def run_migrations_offline() -> None:
