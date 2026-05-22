@@ -20,7 +20,7 @@ def clear_all_data(db: Session, tables: list[str] = None):
 
         if dialect_name == "oracle":
             for table in tables:
-                db.execute(text(f"DELETE FROM {table}"))
+                db.execute(text(f"TRUNCATE TABLE {table}"))
         else:
             table_list = ", ".join(tables)
             db.execute(text(f"TRUNCATE TABLE {table_list} RESTART IDENTITY CASCADE"))
