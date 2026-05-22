@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Identity, Index
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Identity
 from sqlalchemy.orm import relationship
 from datetime import datetime
 
@@ -7,9 +7,6 @@ from src.app.config.base import Base
 
 class Tenant(Base):
     __tablename__ = "tenants"
-    __table_args__ = (
-        Index("ix_tenant_email", "email"),
-    )
 
     id = Column(Integer, Identity(start=1), primary_key=True)
     room_id = Column(Integer, ForeignKey("rooms.id", ondelete="SET NULL"), unique=True)

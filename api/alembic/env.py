@@ -1,5 +1,6 @@
 from logging.config import fileConfig
 
+from src.app.config.base import Base
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
@@ -18,15 +19,12 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-from src.app.config.base import Base
 from src.app.config.config import settings
 from src.app.model import Role, Room, Tenant, User, Invoice, Payment  # noqa: F401
-
 target_metadata = Base.metadata
 
-database_url = settings.DATABASE_URL or config.get_main_option("sqlalchemy.url")
-if database_url:
-    config.set_main_option("sqlalchemy.url", database_url)
+if settings.DATABASE_URL:
+    config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -84,3 +82,4 @@ if context.is_offline_mode():
     run_migrations_offline()
 else:
     run_migrations_online()
+    

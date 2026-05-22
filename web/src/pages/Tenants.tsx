@@ -109,7 +109,7 @@ export default function Tenants() {
                 </TableRow>
               ) : (
                 filteredTenants.map((t: Tenant) => (
-                  <TableRow key={t.id}>
+                  <TableRow>
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-secondary text-sm font-bold text-foreground">
