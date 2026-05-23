@@ -151,7 +151,7 @@ class UserService:
             raise ValueError("User not found")
         
         db.delete(user)
-        db.flush()
+        db.commit()
         return {"message": "User deleted successfully"}
     
     @staticmethod
